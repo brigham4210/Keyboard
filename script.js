@@ -13,6 +13,10 @@ keys.forEach(key => {
 const keyOriginalContent = new Map();
 const keyImages = new Map();
 
+// Topic management
+let currentTopic = null;
+let topics = [];
+
 // Store original content for each key
 keys.forEach(key => {
     keyOriginalContent.set(key, key.innerHTML);
@@ -37,7 +41,7 @@ function applyImageToKey(key, imgUrl) {
 }
 
 // Function to reset key to original appearance
-function resetKeyToOriginal(key) {
+function resetKeyToOriginal(key, save = true) {
     key.style.backgroundImage = '';
     key.style.backgroundSize = '';
     key.style.backgroundPosition = '';
@@ -45,7 +49,9 @@ function resetKeyToOriginal(key) {
     key.innerHTML = keyOriginalContent.get(key);
     key.removeAttribute('data-has-image');
     keyImages.delete(key);
-    saveImagesToStorage();
+    if (save) {
+        saveImagesToStorage();
+    }
 }
 
 // Save images to localStorage
@@ -57,14 +63,20 @@ function saveImagesToStorage() {
             imagesData[keyValue] = keyImages.get(key);
         }
     });
-    localStorage.setItem('keyboardImages', JSON.stringify(imagesData));
-    console.log('Saved images:', imagesData);
+    localStorage.setItem(`keyboardImages_${currentTopic}`, JSON.stringify(imagesData));
+    console.log('Saved images for topic', currentTopic, ':', imagesData);
 }
 
 // Load saved images from localStorage
 function loadSavedImages() {
-    const savedImages = localStorage.getItem('keyboardImages');
-    console.log('Loading saved images:', savedImages);
+    // Clear current images first
+    keys.forEach(key => {
+        resetKeyToOriginal(key, false);
+    });
+    keyImages.clear();
+    
+    const savedImages = localStorage.getItem(`keyboardImages_${currentTopic}`);
+    console.log('Loading saved images for topic', currentTopic, ':', savedImages);
     if (savedImages) {
         try {
             const imagesData = JSON.parse(savedImages);
@@ -81,8 +93,138 @@ function loadSavedImages() {
     }
 }
 
+// Initialize topics
+function initTopics() {
+    const savedTopics = localStorage.getItem('keyboardTopics');
+    if (savedTopics) {
+        topics = JSON.parse(savedTopics);
+    }
+    
+    if (topics.length === 0) {
+        topics.push({ id: Date.now(), name: 'Default' });
+        saveTopics();
+    }
+    
+    currentTopic = topics[0].id;
+    renderTopics();
+    loadSavedImages();
+    updateTitle();
+}
+
+// Save topics to localStorage
+function saveTopics() {
+    localStorage.setItem('keyboardTopics', JSON.stringify(topics));
+}
+
+// Render topic tabs
+function renderTopics() {
+    const topicsList = document.getElementById('topicsList');
+    topicsList.innerHTML = '';
+    
+    topics.forEach(topic => {
+        const tab = document.createElement('div');
+        tab.className = 'topic-tab' + (topic.id === currentTopic ? ' active' : '');
+        tab.innerHTML = `
+            <span class="topic-name" data-topic-id="${topic.id}">${topic.name}</span>
+            ${topics.length > 1 ? `<button class="delete-topic" data-topic-id="${topic.id}">×</button>` : ''}
+        `;
+        
+        tab.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('delete-topic')) {
+                switchTopic(topic.id);
+            }
+        });
+        
+        const topicName = tab.querySelector('.topic-name');
+        topicName.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            renameTopic(topic.id);
+        });
+        
+        const deleteBtn = tab.querySelector('.delete-topic');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteTopic(topic.id);
+            });
+        }
+        
+        topicsList.appendChild(tab);
+    });
+}
+
+// Update title with current topic name
+function updateTitle() {
+    const topic = topics.find(t => t.id === currentTopic);
+    if (topic) {
+        document.querySelector('.title').textContent = topic.name;
+    }
+}
+
+// Switch to a different topic
+function switchTopic(topicId) {
+    currentTopic = topicId;
+    renderTopics();
+    loadSavedImages();
+    updateTitle();
+}
+
+// Add new topic
+function addTopic() {
+    const topicName = prompt('Enter topic name:');
+    if (topicName && topicName.trim()) {
+        const newTopic = {
+            id: Date.now(),
+            name: topicName.trim()
+        };
+        topics.push(newTopic);
+        saveTopics();
+        switchTopic(newTopic.id);
+    }
+}
+
+// Rename topic
+function renameTopic(topicId) {
+    const topic = topics.find(t => t.id === topicId);
+    if (!topic) return;
+    
+    const newName = prompt('Enter new topic name:', topic.name);
+    if (newName && newName.trim() && newName.trim() !== topic.name) {
+        topic.name = newName.trim();
+        saveTopics();
+        renderTopics();
+        updateTitle();
+    }
+}
+
+// Delete topic
+function deleteTopic(topicId) {
+    if (topics.length === 1) {
+        alert('Cannot delete the last topic!');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to delete this topic?')) {
+        topics = topics.filter(t => t.id !== topicId);
+        
+        // Delete topic images from localStorage
+        localStorage.removeItem(`keyboardImages_${topicId}`);
+        
+        if (currentTopic === topicId) {
+            currentTopic = topics[0].id;
+        }
+        
+        saveTopics();
+        renderTopics();
+        loadSavedImages();
+    }
+}
+
+// Add topic button handler
+document.getElementById('addTopicBtn').addEventListener('click', addTopic);
+
 // Load saved images on page load
-loadSavedImages();
+initTopics();
 
 // Handle keyboard events
 document.addEventListener('keydown', (e) => {
