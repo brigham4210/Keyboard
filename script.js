@@ -27,6 +27,63 @@ document.body.appendChild(fileInput);
 
 let currentKeyForImage = null;
 
+// Function to apply image to key
+function applyImageToKey(key, imgUrl) {
+    key.style.backgroundImage = `url('${imgUrl}')`;
+    key.style.backgroundSize = 'cover';
+    key.style.backgroundPosition = 'center';
+    key.style.color = 'transparent';
+    key.setAttribute('data-has-image', 'true');
+}
+
+// Function to reset key to original appearance
+function resetKeyToOriginal(key) {
+    key.style.backgroundImage = '';
+    key.style.backgroundSize = '';
+    key.style.backgroundPosition = '';
+    key.style.color = '';
+    key.innerHTML = keyOriginalContent.get(key);
+    key.removeAttribute('data-has-image');
+    keyImages.delete(key);
+    saveImagesToStorage();
+}
+
+// Save images to localStorage
+function saveImagesToStorage() {
+    const imagesData = {};
+    keys.forEach(key => {
+        const keyValue = key.getAttribute('data-key');
+        if (keyValue && keyImages.has(key)) {
+            imagesData[keyValue] = keyImages.get(key);
+        }
+    });
+    localStorage.setItem('keyboardImages', JSON.stringify(imagesData));
+    console.log('Saved images:', imagesData);
+}
+
+// Load saved images from localStorage
+function loadSavedImages() {
+    const savedImages = localStorage.getItem('keyboardImages');
+    console.log('Loading saved images:', savedImages);
+    if (savedImages) {
+        try {
+            const imagesData = JSON.parse(savedImages);
+            keys.forEach(key => {
+                const keyValue = key.getAttribute('data-key');
+                if (keyValue && imagesData[keyValue]) {
+                    keyImages.set(key, imagesData[keyValue]);
+                    applyImageToKey(key, imagesData[keyValue]);
+                }
+            });
+        } catch (e) {
+            console.error('Error loading saved images:', e);
+        }
+    }
+}
+
+// Load saved images on page load
+loadSavedImages();
+
 // Handle keyboard events
 document.addEventListener('keydown', (e) => {
     let keyElement = null;
@@ -128,6 +185,7 @@ fileInput.addEventListener('change', (e) => {
             const imgUrl = event.target.result;
             keyImages.set(currentKeyForImage, imgUrl);
             applyImageToKey(currentKeyForImage, imgUrl);
+            saveImagesToStorage();
         };
         
         reader.readAsDataURL(file);
@@ -135,24 +193,3 @@ fileInput.addEventListener('change', (e) => {
     // Reset file input
     fileInput.value = '';
 });
-
-// Function to apply image to key
-function applyImageToKey(key, imgUrl) {
-    key.style.backgroundImage = `url('${imgUrl}')`;
-    key.style.backgroundSize = 'cover';
-    key.style.backgroundPosition = 'center';
-    key.style.color = 'transparent';
-    key.setAttribute('data-has-image', 'true');
-}
-
-// Function to reset key to original appearance
-function resetKeyToOriginal(key) {
-    key.style.backgroundImage = '';
-    key.style.backgroundSize = '';
-    key.style.backgroundPosition = '';
-    key.style.color = '';
-    key.innerHTML = keyOriginalContent.get(key);
-    key.removeAttribute('data-has-image');
-    keyImages.delete(key);
-}
-
