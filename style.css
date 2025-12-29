@@ -191,3 +191,15 @@ body {
     font-size: 12px;
     opacity: 0.8;
 }
+
+.footer {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    margin-top: 20px;
+    padding: 10px;
+}
+
+.footer p {
+    margin: 0;
+}
