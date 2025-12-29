@@ -36,6 +36,7 @@ function applyImageToKey(key, imgUrl) {
     key.style.backgroundImage = `url('${imgUrl}')`;
     key.style.backgroundSize = 'cover';
     key.style.backgroundPosition = 'center';
+    key.style.backgroundRepeat = 'no-repeat';
     key.style.color = 'transparent';
     key.setAttribute('data-has-image', 'true');
 }
@@ -44,6 +45,7 @@ function applyImageToKey(key, imgUrl) {
 function resetKeyToOriginal(key, save = true) {
     key.style.backgroundImage = '';
     key.style.backgroundSize = '';
+    key.style.backgroundRepeat = '';
     key.style.backgroundPosition = '';
     key.style.color = '';
     key.innerHTML = keyOriginalContent.get(key);
